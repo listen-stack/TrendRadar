@@ -1,0 +1,12 @@
+name: Temporary runner check
+
+on: workflow_dispatch
+
+permissions: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - run: echo "GitHub-hosted runner reached."
