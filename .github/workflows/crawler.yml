@@ -28,8 +28,6 @@ jobs:
       github.repository != 'sansan0/TrendRadar' &&
       github.ref_name == github.event.repository.default_branch &&
       (github.event_name == 'workflow_dispatch' || vars.RADAR_SCHEDULE_ENABLED == 'true')
-    permissions:
-      contents: write
     runs-on: ubuntu-latest
     timeout-minutes: 12
     env:
@@ -40,6 +38,25 @@ jobs:
     steps:
       - name: Checkout deployment
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Verify private history repository
+        if: env.OPERATION == 'send'
+        id: private_history
+        env:
+          GH_TOKEN: ${{ secrets.RADAR_STATE_TOKEN }}
+        shell: bash
+        run: |
+          history_branch="$(bash scripts/private-radar-state.sh verify)"
+          printf 'branch=%s\n' "$history_branch" >> "$GITHUB_OUTPUT"
+      - name: Restore private history
+        if: env.OPERATION == 'send'
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          repository: ${{ github.repository_owner }}/trendradar-state
+          ref: ${{ steps.private_history.outputs.branch }}
+          token: ${{ secrets.RADAR_STATE_TOKEN }}
+          path: radar-state
       - name: Set up Python 3.12
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
@@ -51,23 +68,6 @@ jobs:
           enable-cache: false
       - name: Install locked dependencies
         run: uv sync --frozen --no-dev
-      - name: Restore history branch
-        if: env.OPERATION != 'test'
-        shell: bash
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          if git ls-remote --exit-code --heads origin refs/heads/radar-history; then
-            git fetch --no-tags --depth=1 origin refs/heads/radar-history
-            git worktree add --detach radar-state FETCH_HEAD
-          else
-            status=$?
-            if [[ "$status" -ne 2 ]]; then exit "$status"; fi
-            tree=$(git mktree </dev/null)
-            first=$(git commit-tree "$tree" -m "Initialize personal radar history")
-            git worktree add --detach radar-state "$first"
-          fi
-          git -C radar-state log -1 --format='Restored history commit: %h'
       - name: Preview RSS and filters
         if: env.OPERATION == 'preview'
         run: uv run --no-sync python personal_radar.py preview
@@ -82,13 +82,11 @@ jobs:
         run: uv run --no-sync python personal_radar.py collect
       - name: Save queue before sending
         if: env.OPERATION == 'send'
+        env:
+          GH_TOKEN: ${{ secrets.RADAR_STATE_TOKEN }}
+          RADAR_STATE_BRANCH: ${{ steps.private_history.outputs.branch }}
         shell: bash
-        run: |
-          git -C radar-state add -- pending.json
-          if ! git -C radar-state diff --cached --quiet; then
-            git -C radar-state commit -m "Checkpoint pending RSS digest"
-            git push origin "$(git -C radar-state rev-parse HEAD):refs/heads/radar-history"
-          fi
+        run: bash scripts/private-radar-state.sh save "Checkpoint pending RSS digest"
       - name: Deliver digest to the private channel
         if: env.OPERATION == 'send'
         id: deliver
@@ -98,11 +96,8 @@ jobs:
         run: uv run --no-sync python personal_radar.py deliver
       - name: Save delivery history
         if: always() && steps.deliver.outcome != 'skipped' && steps.deliver.outcome != ''
+        env:
+          GH_TOKEN: ${{ secrets.RADAR_STATE_TOKEN }}
+          RADAR_STATE_BRANCH: ${{ steps.private_history.outputs.branch }}
         shell: bash
-        run: |
-          git -C radar-state add -- pending.json
-          if [[ -d radar-state/history ]]; then git -C radar-state add -- history/; fi
-          if ! git -C radar-state diff --cached --quiet; then
-            git -C radar-state commit -m "Record confirmed RSS delivery"
-            git push origin "$(git -C radar-state rev-parse HEAD):refs/heads/radar-history"
-          fi
+        run: bash scripts/private-radar-state.sh save "Record confirmed RSS delivery"
