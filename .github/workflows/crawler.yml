@@ -17,7 +17,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: personal-radar-state
+  # Scheduled and manual delivery runs share a write lock. Preview and test have their own groups.
+  group: personal-radar-${{ inputs.operation || 'send' }}
   cancel-in-progress: false
 
 jobs:
