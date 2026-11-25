@@ -12,6 +12,7 @@ on:
 
 jobs:
   del_runs:
+    if: github.repository == 'sansan0/TrendRadar'
     runs-on: ubuntu-latest
     permissions:
       actions: write

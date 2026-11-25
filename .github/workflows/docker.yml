@@ -25,8 +25,9 @@ jobs:
     runs-on: ubuntu-latest
     # 条件：v* 标签（排除 mcp-v*）或手动触发选择 all/crawler
     if: |
-      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && !startsWith(github.ref, 'refs/tags/mcp-v')) ||
-      (github.event_name == 'workflow_dispatch' && (github.event.inputs.image == 'all' || github.event.inputs.image == 'crawler'))
+      github.repository == 'sansan0/TrendRadar' &&
+      ((github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && !startsWith(github.ref, 'refs/tags/mcp-v')) ||
+      (github.event_name == 'workflow_dispatch' && (github.event.inputs.image == 'all' || github.event.inputs.image == 'crawler')))
 
     steps:
       - name: Checkout
@@ -75,8 +76,9 @@ jobs:
     runs-on: ubuntu-latest
     # 条件：mcp-v* 标签 或手动触发选择 all/mcp
     if: |
-      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/mcp-v')) ||
-      (github.event_name == 'workflow_dispatch' && (github.event.inputs.image == 'all' || github.event.inputs.image == 'mcp'))
+      github.repository == 'sansan0/TrendRadar' &&
+      ((github.event_name == 'push' && startsWith(github.ref, 'refs/tags/mcp-v')) ||
+      (github.event_name == 'workflow_dispatch' && (github.event.inputs.image == 'all' || github.event.inputs.image == 'mcp')))
 
     steps:
       - name: Checkout
