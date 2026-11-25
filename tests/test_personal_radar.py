@@ -145,7 +145,7 @@ class PersonalRadarTest(unittest.TestCase):
         token = "test-token-that-must-not-be-printed"
         response = Mock(status_code=401)
         response.json.return_value = {"ok": False, "description": token}
-        with patch.dict("os.environ", TELEGRAM_BOT_TOKEN=token, TELEGRAM_CHAT_ID="-100123"):
+        with patch.dict("os.environ", TELEGRAM_BOT_TOKEN=token, TELEGRAM_CHAT_ID="-1001234567890"):
             with patch("personal_radar.requests.post", return_value=response):
                 with patch("sys.stdout", new_callable=StringIO) as output:
                     with self.assertRaises(SystemExit) as error:
@@ -154,11 +154,11 @@ class PersonalRadarTest(unittest.TestCase):
         self.assertNotIn(token, output.getvalue())
 
     def test_telegram_rejects_public_channels_before_sending(self):
-        with patch.dict("os.environ", TELEGRAM_BOT_TOKEN="test", TELEGRAM_CHAT_ID="-100123"):
+        with patch.dict("os.environ", TELEGRAM_BOT_TOKEN="test", TELEGRAM_CHAT_ID="-1997852516352"):
             with patch("personal_radar.telegram_call", return_value={"type": "channel", "username": "public"}) as call:
                 with self.assertRaises(SystemExit):
                     send_message("test")
-        call.assert_called_once_with("test", "getChat", {"chat_id": "-100123"})
+        call.assert_called_once_with("test", "getChat", {"chat_id": "-1997852516352"})
 
 
 if __name__ == "__main__":

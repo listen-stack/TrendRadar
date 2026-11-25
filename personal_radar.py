@@ -210,7 +210,10 @@ def telegram_call(token, method, data):
 def send_message(text):
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
     chat_id = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
-    if not token or not re.fullmatch(r"-100[0-9]+", chat_id):
+    is_channel_id = re.fullmatch(r"-1[0-9]{12}", chat_id) and (
+        -1_997_852_516_352 <= int(chat_id) <= -1_000_000_000_001
+    )
+    if not token or not is_channel_id:
         raise SystemExit("请配置 Telegram Bot Token 和私人频道的数字 Chat ID。")
     chat = telegram_call(token, "getChat", {"chat_id": chat_id})
     if chat.get("type") != "channel" or chat.get("username") or chat.get("active_usernames"):
